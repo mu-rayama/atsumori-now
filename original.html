@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>あつ森 いま捕れるもの</title>
+<style>
+:root{--bg:#f5f1df;--panel:#fffdf4;--ink:#26433a;--muted:#6f7f78;--accent:#38a978;--accent2:#f2b84b;--line:#dce4d9;--danger:#c75b55;--shadow:0 10px 30px rgba(38,67,58,.10)}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;background:linear-gradient(180deg,#dff4e8 0,#f5f1df 280px);color:var(--ink)}
+header{padding:28px 18px 20px;text-align:center}h1{margin:0;font-size:clamp(26px,7vw,44px);letter-spacing:.03em}header p{margin:8px 0 0;color:var(--muted)}
+main{width:min(1100px,calc(100% - 24px));margin:auto;padding-bottom:60px}.panel{background:rgba(255,253,244,.96);border:1px solid rgba(255,255,255,.8);border-radius:22px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:end}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;font-weight:700;color:var(--muted)}select,input,button{font:inherit}select,input[type=datetime-local],input[type=search]{width:100%;border:1px solid var(--line);border-radius:12px;background:white;padding:11px 12px;color:var(--ink)}
+button{border:0;border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:var(--accent);color:white}.secondary{background:#edf4ef;color:var(--ink)}.danger{background:#fff0ee;color:var(--danger)}
+.switchline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.check{display:inline-flex;align-items:center;gap:7px;background:#edf4ef;border-radius:999px;padding:9px 12px;font-size:14px;font-weight:700}.check input{accent-color:var(--accent)}
+.status{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.now{font-weight:800;font-size:18px}.summary{display:flex;gap:8px;flex-wrap:wrap}.badge{padding:7px 10px;border-radius:999px;background:#edf4ef;font-weight:700;font-size:13px}.badge strong{font-size:16px}
+.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:2px}.tab{white-space:nowrap;background:#edf4ef;color:var(--ink)}.tab.active{background:var(--ink);color:white}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:15px;display:flex;flex-direction:column;gap:10px;min-height:175px}.card.caught{opacity:.55}.cardhead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.name{font-size:20px;font-weight:800}.type{font-size:12px;border-radius:999px;padding:5px 8px;background:#edf4ef;font-weight:700}.meta{display:grid;grid-template-columns:auto 1fr;gap:5px 9px;font-size:14px}.meta dt{color:var(--muted);font-weight:700}.meta dd{margin:0;font-weight:600}.price{margin-top:auto;font-weight:800;color:#936700}.caughtBtn{position:absolute;right:12px;bottom:12px;width:38px;height:38px;padding:0;border-radius:50%;background:#e7efe9;color:var(--ink);font-size:20px}.caught .caughtBtn{background:var(--accent);color:white}.empty{text-align:center;padding:40px 12px;color:var(--muted)}
+.note{font-size:12px;line-height:1.7;color:var(--muted)}.note a{color:inherit}.loading{text-align:center;padding:45px;font-weight:700}.error{color:var(--danger);line-height:1.7}
+@media(max-width:800px){.controls{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr 1fr}}@media(max-width:540px){.controls,.grid{grid-template-columns:1fr}.panel{border-radius:18px}.status{align-items:flex-start}.card{min-height:0;padding-bottom:58px}}
+</style>
+</head>
+<body>
+<header><h1>🌿 あつ森 いま捕れるもの</h1><p>現在の月・時間に出現する虫、魚、海の幸をすぐ確認</p></header>
+<main>
+<section class="panel controls">
+  <div class="field"><label for="hemisphere">島の半球</label><select id="hemisphere"><option value="northern">北半球</option><option value="southern">南半球</option></select></div>
+  <div class="field"><label for="mode">日時</label><select id="mode"><option value="now">現在日時</option><option value="custom">指定日時</option></select></div>
+  <div class="field"><label for="customDate">ゲーム内日時</label><input id="customDate" type="datetime-local" disabled></div>
+  <button id="refresh" class="primary">現在時刻に更新</button>
+</section>
+<section class="panel">
+  <div class="status"><div id="nowText" class="now"></div><div class="summary"><span class="badge">表示 <strong id="visibleCount">0</strong></span><span class="badge">捕獲済み <strong id="caughtCount">0</strong></span></div></div>
+</section>
+<section class="panel">
+  <div class="tabs" id="tabs"><button class="tab active" data-type="all">すべて</button><button class="tab" data-type="fish">🐟 魚</button><button class="tab" data-type="bugs">🦋 虫</button><button class="tab" data-type="sea">🫧 海の幸</button></div>
+  <div style="height:12px"></div>
+  <div class="switchline"><label class="check"><input id="hideCaught" type="checkbox" checked>捕獲済みを除外</label><label class="check"><input id="onlyLeaving" type="checkbox">今月で終了のみ</label><input id="search" type="search" placeholder="名前・場所で検索" style="flex:1;min-width:190px"><button id="resetCaught" class="danger">捕獲状況をリセット</button></div>
+</section>
+<section id="content" class="grid"><div class="panel loading" style="grid-column:1/-1">データを読み込んでいます…</div></section>
+<section class="panel note">
+  <strong>データについて：</strong> 出現条件の確認元はGameWith「あつ森攻略」の魚・虫・海の幸図鑑です。HTML内では同等項目を持つ公開データセット（ACNH API）を機械処理用に読み込みます。画像は使用していません。捕獲状況はこの端末のブラウザ内だけに保存されます。<br>
+  参考：<a href="https://gamewith.jp/atsumori/" target="_blank" rel="noopener">GameWith あつ森攻略</a> ／ データ取得にはインターネット接続が必要です。取得先を複数用意し、接続できる配信先へ自動的に切り替えます。
+</section>
+</main>
+<script>
+const SOURCES={
+ fish:['https://acnhapi.com/v1/fish','https://raw.githubusercontent.com/alexislours/ACNHAPI/master/fish.json','https://cdn.jsdelivr.net/gh/alexislours/ACNHAPI@master/fish.json'],
+ bugs:['https://acnhapi.com/v1/bugs','https://raw.githubusercontent.com/alexislours/ACNHAPI/master/bugs.json','https://cdn.jsdelivr.net/gh/alexislours/ACNHAPI@master/bugs.json'],
+ sea:['https://acnhapi.com/v1/sea','https://raw.githubusercontent.com/alexislours/ACNHAPI/master/sea.json','https://cdn.jsdelivr.net/gh/alexislours/ACNHAPI@master/sea.json']
+};
+const TYPE_LABEL={fish:'魚',bugs:'虫',sea:'海の幸'},TYPE_ICON={fish:'🐟',bugs:'🦋',sea:'🫧'};
+const LOCATION={River:'川',Pond:'池','River (Clifftop)':'崖の上','River (Mouth)':'河口',Sea:'海',Pier:'桟橋','Sea (when raining or snowing)':'海（雨・雪）','Flying':'空中','Flying by light':'明かりの近く','Flying near water':'水辺の空中','On trees':'木','On palm trees':'ヤシの木','On tree stumps':'切り株','On the ground':'地面','Underground':'地中','On flowers':'花','On white flowers':'白い花','On rotten food':'腐った食べ物','On villagers':'住民','On rocks':'岩','On the beach':'砂浜','Disguised on shoreline':'海岸に擬態','Pushing snowballs':'雪玉','On rivers/ponds':'川・池の水面','On trash items':'ゴミ','On tree stumps':'切り株'};
+const SHADOW={'Smallest (1)':'極小','Small (2)':'小','Medium (3)':'中','Medium (4)':'中大','Large (5)':'大','Largest (6)':'特大','Large w/Fin (6)':'背びれ','Long':'細長'};
+const SPEED={Stationary:'動かない','Very slow':'とても遅い',Slow:'遅い',Medium:'普通',Fast:'速い','Very fast':'とても速い'};
+let data=[],activeType='all';
+const $=s=>document.querySelector(s);
+function caughtSet(){try{return new Set(JSON.parse(localStorage.getItem('acnh-caught-v1')||'[]'))}catch{return new Set()}}
+function saveCaught(set){localStorage.setItem('acnh-caught-v1',JSON.stringify([...set]))}
+function currentDate(){if($('#mode').value==='custom'&&$('#customDate').value)return new Date($('#customDate').value);return new Date()}
+function fmtTime(item){const a=item.availability;if(a.isAllDay)return '一日中';return (a.time||'').replace(/am/gi,'時').replace(/pm/gi,'時').replace(/ - /g,'〜').replace(/^0時/,'0時')||a['time-array'].map(x=>x+'時').join(', ')}
+function months(item,hemi){return item.availability[`month-array-${hemi}`]||[]}
+function monthText(item,hemi){const a=item.availability;if(a.isAllYear)return '一年中';const arr=months(item,hemi);return compressMonths(arr)}
+function compressMonths(arr){if(!arr.length)return '—';const s=[...arr].sort((a,b)=>a-b),runs=[];let st=s[0],pr=s[0];for(let i=1;i<=s.length;i++){const v=s[i];if(v===pr+1){pr=v;continue}runs.push(st===pr?`${st}月`:`${st}〜${pr}月`);st=pr=v}return runs.join('、')}
+function parseHour(text){
+ const m=String(text).trim().toLowerCase().match(/^(\d{1,2})(?::\d{2})?\s*(am|pm)?$/);
+ if(!m)return null;
+ let h=Number(m[1]);
+ if(m[2]==='am'&&h===12)h=0;
+ if(m[2]==='pm'&&h!==12)h+=12;
+ return h>=0&&h<=23?h:null;
+}
+function hoursFromTimeText(text){
+ const value=String(text||'').trim().toLowerCase();
+ if(!value)return [];
+
+ // 例: "4am - 8am & 5pm - 7pm" のような複数時間帯にも対応する。
+ const ranges=value.split(/\s*(?:&|,|／|\/)\s*/).filter(Boolean);
+ const result=new Set();
+
+ for(const range of ranges){
+  const parts=range.split(/\s*-\s*/);
+  if(parts.length!==2)continue;
+
+  const start=parseHour(parts[0]);
+  const end=parseHour(parts[1]);
+  if(start===null||end===null)continue;
+
+  // 終了時刻は含めない。9am-4pm は 9:00〜15:59。
+  if(start<end){
+   for(let h=start;h<end;h++)result.add(h);
+  }else if(start>end){
+   for(let h=start;h<24;h++)result.add(h);
+   for(let h=0;h<end;h++)result.add(h);
+  }else{
+   // 開始と終了が同じ表記は終日として扱う。
+   for(let h=0;h<24;h++)result.add(h);
+  }
+ }
+
+ return [...result].sort((a,b)=>a-b);
+}
+function availableHours(item){
+ const a=item.availability||{};
+ if(a.isAllDay===true)return [...Array(24).keys()];
+ const raw=Array.isArray(a['time-array'])?a['time-array']:[];
+ const normalized=[...new Set(raw.map(Number).filter(Number.isInteger).filter(h=>h>=0&&h<=23))];
+ // 配信元の time-array と表示用 time が食い違う場合は、明示された時間文字列を優先する。
+ const parsed=hoursFromTimeText(a.time);
+ return parsed.length?parsed:normalized;
+}
+function isAvailable(item,d,hemi){
+ const month=d.getMonth()+1,hour=d.getHours();
+ return months(item,hemi).map(Number).includes(month)&&availableHours(item).includes(hour);
+}
+function isLeaving(item,d,hemi){const arr=months(item,hemi),m=d.getMonth()+1,next=m===12?1:m+1;return arr.includes(m)&&!arr.includes(next)}
+function normalize(obj,type){return Object.values(obj).map(x=>({...x,type,key:`${type}-${x.id}`}))}
+async function fetchJson(url,timeout=9000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);try{const r=await fetch(url,{cache:'default',signal:controller.signal});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json()}finally{clearTimeout(timer)}}
+async function fetchWithFallback(type,urls){const errors=[];for(const url of urls){try{return normalize(await fetchJson(url),type)}catch(e){errors.push(`${new URL(url).hostname}: ${e.name==='AbortError'?'タイムアウト':e.message}`)}}throw new Error(`${TYPE_LABEL[type]}（${errors.join(' / ')}）`)}
+async function load(){
+ $('#content').innerHTML='<div class="panel loading" style="grid-column:1/-1">データを読み込んでいます…</div>';
+ try{const pairs=await Promise.all(Object.entries(SOURCES).map(([type,urls])=>fetchWithFallback(type,urls)));data=pairs.flat();render()}
+ catch(e){$('#content').innerHTML=`<div class="panel error" style="grid-column:1/-1"><strong>データを読み込めませんでした。</strong><br>外部データ配信先への接続が制限されている可能性があります。下のボタンで再試行するか、HTMLをSafari／Chromeへ保存して直接開いてください。<br><button id="retryLoad" class="primary" style="margin-top:12px">再試行</button><br><small>${String(e.message||e)}</small></div>`;$('#retryLoad').onclick=load}
+}
+function card(item,caught,hemi){const a=item.availability;const detail=item.type==='fish'?`魚影：${SHADOW[item.shadow]||item.shadow||'—'}`:item.type==='sea'?`影：${item.shadow||'—'}／速さ：${SPEED[item.speed]||item.speed||'—'}`:'';return `<article class="card ${caught?'caught':''}" data-key="${item.key}"><div class="cardhead"><div class="name">${item.name['name-JPja']}</div><span class="type">${TYPE_ICON[item.type]} ${TYPE_LABEL[item.type]}</span></div><dl class="meta"><dt>場所</dt><dd>${LOCATION[a.location]||a.location||'—'}</dd><dt>時間</dt><dd>${fmtTime(item)}</dd><dt>時期</dt><dd>${monthText(item,hemi)}</dd>${detail?`<dt>特徴</dt><dd>${detail}</dd>`:''}<dt>売値</dt><dd>${Number(item.price||0).toLocaleString()}ベル</dd></dl><button class="caughtBtn" title="捕獲済みを切替" aria-label="捕獲済みを切替">${caught?'✓':'○'}</button></article>`}
+function render(){const d=currentDate(),hemi=$('#hemisphere').value,caught=caughtSet(),q=$('#search').value.trim().toLowerCase();$('#nowText').textContent=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}・${hemi==='northern'?'北半球':'南半球'}`;let list=data.filter(x=>isAvailable(x,d,hemi));if(activeType!=='all')list=list.filter(x=>x.type===activeType);if($('#hideCaught').checked)list=list.filter(x=>!caught.has(x.key));if($('#onlyLeaving').checked)list=list.filter(x=>isLeaving(x,d,hemi));if(q)list=list.filter(x=>`${x.name['name-JPja']} ${LOCATION[x.availability.location]||x.availability.location}`.toLowerCase().includes(q));list.sort((a,b)=>a.type.localeCompare(b.type)||b.price-a.price);$('#visibleCount').textContent=list.length;$('#caughtCount').textContent=caught.size;$('#content').innerHTML=list.length?list.map(x=>card(x,caught.has(x.key),hemi)).join(''):`<div class="panel empty" style="grid-column:1/-1">条件に合う生き物はいません。</div>`;document.querySelectorAll('.caughtBtn').forEach(btn=>btn.onclick=()=>{const key=btn.closest('.card').dataset.key,s=caughtSet();s.has(key)?s.delete(key):s.add(key);saveCaught(s);render()})}
+$('#mode').onchange=()=>{$('#customDate').disabled=$('#mode').value!=='custom';render()};$('#refresh').onclick=()=>{if($('#mode').value==='custom'){const n=new Date();n.setMinutes(n.getMinutes()-n.getTimezoneOffset());$('#customDate').value=n.toISOString().slice(0,16)}render()};['hemisphere','customDate','hideCaught','onlyLeaving'].forEach(id=>$('#'+id).onchange=render);$('#search').oninput=render;$('#tabs').onclick=e=>{const b=e.target.closest('.tab');if(!b)return;activeType=b.dataset.type;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));render()};$('#resetCaught').onclick=()=>{if(confirm('捕獲済みの記録をすべて削除しますか？')){localStorage.removeItem('acnh-caught-v1');render()}};
+const n=new Date();n.setMinutes(n.getMinutes()-n.getTimezoneOffset());$('#customDate').value=n.toISOString().slice(0,16);load();setInterval(()=>{if($('#mode').value==='now')render()},60000);
+</script>
+</body></html>
