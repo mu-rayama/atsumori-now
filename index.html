@@ -57,7 +57,51 @@ const $=s=>document.querySelector(s);
 function caughtSet(){try{return new Set(JSON.parse(localStorage.getItem('acnh-caught-v1')||'[]'))}catch{return new Set()}}
 function saveCaught(set){localStorage.setItem('acnh-caught-v1',JSON.stringify([...set]))}
 function currentDate(){if($('#mode').value==='custom'&&$('#customDate').value)return new Date($('#customDate').value);return new Date()}
-function fmtTime(item){const a=item.availability;if(a.isAllDay)return '一日中';return (a.time||'').replace(/am/gi,'時').replace(/pm/gi,'時').replace(/ - /g,'〜').replace(/^0時/,'0時')||a['time-array'].map(x=>x+'時').join(', ')}
+function formatHour(hour) {
+  return `${hour}時`;
+}
+function fmtTime(item) {
+  const availability = item.availability || {};
+
+  if (availability.isAllDay === true) {
+    return "一日中";
+  }
+
+  const text = String(availability.time || "")
+    .trim()
+    .toLowerCase();
+
+  if (!text) {
+    return "—";
+  }
+
+  const ranges = text
+    .split(/\s*(?:&|,|／|\/)\s*/)
+    .filter(Boolean);
+
+  const formatted = ranges.map(range => {
+    const parts = range.split(/\s*-\s*/);
+
+    if (parts.length !== 2) {
+      return range;
+    }
+
+    const start = parseHour(parts[0]);
+    const end = parseHour(parts[1]);
+
+    if (start === null || end === null) {
+      return range;
+    }
+
+    if (start > end) {
+      return `${formatHour(start)}〜翌${formatHour(end)}`;
+    }
+
+    return `${formatHour(start)}〜${formatHour(end)}`;
+  });
+
+  return formatted.join("、");
+}
 function months(item,hemi){return item.availability[`month-array-${hemi}`]||[]}
 function monthText(item,hemi){const a=item.availability;if(a.isAllYear)return '一年中';const arr=months(item,hemi);return compressMonths(arr)}
 function compressMonths(arr){if(!arr.length)return '—';const s=[...arr].sort((a,b)=>a-b),runs=[];let st=s[0],pr=s[0];for(let i=1;i<=s.length;i++){const v=s[i];if(v===pr+1){pr=v;continue}runs.push(st===pr?`${st}月`:`${st}〜${pr}月`);st=pr=v}return runs.join('、')}
