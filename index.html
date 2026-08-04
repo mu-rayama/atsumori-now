@@ -69,18 +69,63 @@ function parseHour(text){
  if(m[2]==='pm'&&h!==12)h+=12;
  return h>=0&&h<=23?h:null;
 }
-function hoursFromTimeText(text){
- const value=String(text||'').trim().toLowerCase();
- if(!value)return [...Array(24).keys()];
- const parts=value.split(/\s*-\s*/);
- if(parts.length!==2)return [];
- const start=parseHour(parts[0]),end=parseHour(parts[1]);
- if(start===null||end===null)return [];
- const result=[];
- // あつ森の終了時刻は「その時刻になる直前まで」。例: 9am-4pm → 9〜15時。
- if(start<end){for(let h=start;h<end;h++)result.push(h)}
- else{for(let h=start;h<24;h++)result.push(h);for(let h=0;h<end;h++)result.push(h)}
- return result;
+function hoursFromTimeText(text) {
+  const value = String(text || "")
+    .trim()
+    .toLowerCase();
+
+  if (!value) {
+    return [];
+  }
+
+  // 例：
+  // "4am - 8am & 5pm - 7pm"
+  // のような複数の時間帯にも対応
+  const ranges = value
+    .split(/\s*(?:&|,|／|\/)\s*/)
+    .filter(Boolean);
+
+  const result = new Set();
+
+  for (const range of ranges) {
+    const parts = range.split(/\s*-\s*/);
+
+    if (parts.length !== 2) {
+      continue;
+    }
+
+    const start = parseHour(parts[0]);
+    const end = parseHour(parts[1]);
+
+    if (start === null || end === null) {
+      continue;
+    }
+
+    // 終了時刻は含めない
+    // 9am - 4pm → 9:00〜15:59
+    if (start < end) {
+      for (let hour = start; hour < end; hour++) {
+        result.add(hour);
+      }
+    } else if (start > end) {
+      // 日をまたぐ時間帯
+      // 4pm - 9am → 16:00〜翌8:59
+      for (let hour = start; hour < 24; hour++) {
+        result.add(hour);
+      }
+
+      for (let hour = 0; hour < end; hour++) {
+        result.add(hour);
+      }
+    } else {
+      // 開始時刻と終了時刻が同じ場合は終日
+      for (let hour = 0; hour < 24; hour++) {
+        result.add(hour);
+      }
+    }
+  }
+
+  return [...result].sort((a, b) => a - b);
 }
 function availableHours(item){
  const a=item.availability||{};
